@@ -2854,12 +2854,6 @@ def normalize_date_of_birth(value: str) -> Optional[str]:
     raw = (value or "").strip()
     if not raw:
         return None
-    digits_only = re.sub(r"\D", "", raw)
-    if len(digits_only) == 8 and raw != digits_only:
-        raw = f"{digits_only[:2]}/{digits_only[2:4]}/{digits_only[4:8]}"
-    elif len(digits_only) == 8 and re.fullmatch(r"\d{8}", raw):
-        raw = f"{digits_only[:2]}/{digits_only[2:4]}/{digits_only[4:8]}"
-
     parsed = None
     for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
         try:
@@ -2867,6 +2861,14 @@ def normalize_date_of_birth(value: str) -> Optional[str]:
             break
         except ValueError:
             continue
+    if parsed is None:
+        digits_only = re.sub(r"\D", "", raw)
+        if len(digits_only) == 8:
+            compact_value = f"{digits_only[:2]}/{digits_only[2:4]}/{digits_only[4:8]}"
+            try:
+                parsed = datetime.strptime(compact_value, "%d/%m/%Y").date()
+            except ValueError:
+                parsed = None
     if parsed is None:
         return None
     today = datetime.now().date()
