@@ -221,7 +221,7 @@ DEFAULT_SETTINGS = {
     "status_message_pending": "Your enrollment is currently under review. We will contact you after verification.",
     "status_message_confirmed": "Your enrollment has been confirmed. Please stay connected with the academy for the next admission steps.",
     "status_message_rejected": "Your enrollment could not be approved at this time. Please contact the admin or visit the academy office for guidance.",
-    "status_message_not_found": "No enrollment record matched the provided CNIC number. Please check the details and try again.",
+    "status_message_not_found": "No enrollment record matched the provided CNIC number and date of birth. Please check the details and try again.",
     "admission_form_note": "Please submit a printed copy of this form with Rs. 5000 at the admin office to complete the admission process.",
     "homepage_popup_enabled": "1",
     "homepage_popup_title": "Admissions & Results Update",
@@ -2854,6 +2854,12 @@ def normalize_date_of_birth(value: str) -> Optional[str]:
     raw = (value or "").strip()
     if not raw:
         return None
+    digits_only = re.sub(r"\D", "", raw)
+    if len(digits_only) == 8 and raw != digits_only:
+        raw = f"{digits_only[:2]}/{digits_only[2:4]}/{digits_only[4:8]}"
+    elif len(digits_only) == 8 and re.fullmatch(r"\d{8}", raw):
+        raw = f"{digits_only[:2]}/{digits_only[2:4]}/{digits_only[4:8]}"
+
     parsed = None
     for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
         try:
@@ -2862,18 +2868,7 @@ def normalize_date_of_birth(value: str) -> Optional[str]:
         except ValueError:
             continue
     if parsed is None:
-        short_match = re.fullmatch(r"(\d{2})/(\d{2})/(\d{2})", raw)
-        if not short_match:
-            return None
-        day_value = int(short_match.group(1))
-        month_value = int(short_match.group(2))
-        year_two_digits = int(short_match.group(3))
-        current_two_digit_year = datetime.now().year % 100
-        full_year = 2000 + year_two_digits if year_two_digits <= current_two_digit_year else 1900 + year_two_digits
-        try:
-            parsed = datetime(full_year, month_value, day_value).date()
-        except ValueError:
-            return None
+        return None
     today = datetime.now().date()
     if parsed > today or parsed.year < 1900:
         return None
@@ -3087,7 +3082,7 @@ def normalize_student_enrollment_payload(raw_form) -> Tuple[Optional[str], Optio
     if not email:
         return "Please enter a valid email address.", None
     if not date_of_birth:
-        return "Please enter a valid date of birth.", None
+        return "Please enter a valid date of birth in DD/MM/YYYY format.", None
     if not mobile:
         return "Please enter a valid mobile number in +92 1234567890 format.", None
     if not cnic:
@@ -4272,7 +4267,7 @@ def find_student_for_status_lookup(cnic: str, date_of_birth: str) -> Optional[Di
     normalized_cnic = normalize_cnic(cnic or "")
     raw_date_of_birth = str(date_of_birth or "").strip()
     normalized_date_of_birth = normalize_status_lookup_date_of_birth(raw_date_of_birth) if raw_date_of_birth else None
-    if not normalized_cnic:
+    if not normalized_cnic or not normalized_date_of_birth:
         return None
 
     with get_connection() as connection:
@@ -4287,11 +4282,10 @@ def find_student_for_status_lookup(cnic: str, date_of_birth: str) -> Optional[Di
         ).fetchall()
     if not rows:
         return None
-    if normalized_date_of_birth:
-        for row in rows:
-            if normalize_date_of_birth(row["date_of_birth"] or "") == normalized_date_of_birth:
-                return serialize_student(row)
-    return serialize_student(rows[0])
+    for row in rows:
+        if normalize_date_of_birth(row["date_of_birth"] or "") == normalized_date_of_birth:
+            return serialize_student(row)
+    return None
 
 
 def filename_date_fragment(value: Any) -> str:
@@ -5046,6 +5040,8 @@ def api_enrollment_status():
 
     if not cnic:
         return json_error("Please enter a valid CNIC number.")
+    if not normalize_status_lookup_date_of_birth(date_of_birth):
+        return json_error("Please enter date of birth in DD/MM/YYYY format.")
 
     student = find_student_for_status_lookup(cnic, date_of_birth)
     if not student:
@@ -5118,6 +5114,8 @@ def api_enrollment_form_download():
 
     if not cnic:
         return json_error("Please enter a valid CNIC number.")
+    if not normalize_status_lookup_date_of_birth(date_of_birth):
+        return json_error("Please enter date of birth in DD/MM/YYYY format.")
 
     settings = get_settings()
     if str(settings.get("status_check_enabled", "1")) != "1":
@@ -5129,7 +5127,7 @@ def api_enrollment_form_download():
 
     student = find_student_for_status_lookup(cnic, date_of_birth)
     if not student:
-        return json_error("No enrollment record matched the provided CNIC number.", 404)
+        return json_error("No enrollment record matched the provided CNIC number and date of birth.", 404)
     if student["status"] != "confirmed":
         return json_error("Admission form download is available only after admission confirmation.", 400)
     return make_admission_pdf_response(student)
@@ -7404,7 +7402,7 @@ ADMIN_HTML_PARTS.append(
                 </div>
                 <div class="grid2">
                     <div class="field"><label for="editEmail">Email Address</label><input class="input" id="editEmail" name="email" type="email" required></div>
-                    <div class="field"><label for="editDateOfBirth">Date of Birth</label><input class="input" id="editDateOfBirth" name="date_of_birth" type="date" required></div>
+                    <div class="field"><label for="editDateOfBirth">Date of Birth (DD/MM/YYYY)</label><input class="input" id="editDateOfBirth" name="date_of_birth" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/YYYY" required><small class="muted">Example: 05/03/2008</small></div>
                 </div>
                 <div class="grid2">
                     <div class="field">
@@ -7643,7 +7641,14 @@ ADMIN_HTML_PARTS.append(
         function notifyCrossPageSync(target){const payload={target,ts:Date.now()};writeSyncKey(target==='public'?publicSyncKey:adminSyncKey,payload);if(crossPageSyncChannel)crossPageSyncChannel.postMessage(payload)}
         function handleAdminSyncMessage(payload){if(!payload||payload.target!=='admin'||dashboardView.classList.contains('hidden'))return;refreshAdminLiveData(true)}
         function escapeHtml(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
-        function formatDate(value){if(!value)return'N/A';const date=new Date(value);if(Number.isNaN(date.getTime()))return value;return date.toLocaleDateString('en-PK',{year:'numeric',month:'short',day:'numeric'})}
+        function extractEnrollmentDateDigits(value){return String(value||'').replace(/\D/g,'').slice(0,8)}
+        function formatEnrollmentDateValue(value){const raw=String(value||'').trim();if(!raw)return'';if(/^\d{4}-\d{2}-\d{2}$/.test(raw)){const[year,month,day]=raw.split('-');return`${day}/${month}/${year}`}if(/^\d{2}\/\d{2}\/\d{4}$/.test(raw))return raw;const digits=extractEnrollmentDateDigits(raw);const parts=[];if(digits.length>0)parts.push(digits.slice(0,2));if(digits.length>2)parts.push(digits.slice(2,4));if(digits.length>4)parts.push(digits.slice(4,8));return parts.join('/')}
+        function parseEnrollmentDateValue(value){const formatted=/^\d{8}$/.test(String(value||'').trim())?formatEnrollmentDateValue(value):String(value||'').trim();const match=formatted.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(match){const day=Number(match[1]);const month=Number(match[2]);const year=Number(match[3]);const parsed=new Date(year,month-1,day);if(Number.isNaN(parsed.getTime())||parsed.getFullYear()!==year||parsed.getMonth()!==month-1||parsed.getDate()!==day)return null;return parsed}if(/^\d{4}-\d{2}-\d{2}$/.test(formatted)){const[year,month,day]=formatted.split('-').map((item)=>Number(item));const parsed=new Date(year,month-1,day);if(Number.isNaN(parsed.getTime())||parsed.getFullYear()!==year||parsed.getMonth()!==month-1||parsed.getDate()!==day)return null;return parsed}return null}
+        function validateEnrollmentDateValue(value){const parsed=parseEnrollmentDateValue(value);if(!parsed)return false;const today=new Date();today.setHours(0,0,0,0);parsed.setHours(0,0,0,0);return parsed<=today&&parsed.getFullYear()>=1900}
+        function formatEnrollmentDateInput(input){if(!input)return;input.value=formatEnrollmentDateValue(input.value)}
+        function handleEnrollmentDateKeydown(event){if(event.ctrlKey||event.metaKey||event.altKey)return;const allowedKeys=['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab','Home','End','Enter'];if(allowedKeys.includes(event.key))return;if(!/^\d$/.test(event.key))event.preventDefault()}
+        function attachEnrollmentDateFormatting(input){if(!input)return;input.addEventListener('keydown',handleEnrollmentDateKeydown);input.addEventListener('input',()=>formatEnrollmentDateInput(input));input.addEventListener('paste',()=>setTimeout(()=>formatEnrollmentDateInput(input),0));input.addEventListener('blur',()=>formatEnrollmentDateInput(input))}
+        function formatDate(value){if(!value)return'N/A';const raw=String(value||'').trim();if(/^\d{4}-\d{2}-\d{2}$/.test(raw)){const[year,month,day]=raw.split('-');return`${day}/${month}/${year}`}if(/^\d{2}\/\d{2}\/\d{4}$/.test(raw))return raw;const date=new Date(raw);if(Number.isNaN(date.getTime()))return raw;return date.toLocaleDateString('en-PK',{year:'numeric',month:'short',day:'numeric'})}
         function hasInvalidPhoneChars(value){return /[^+\d\s]/.test(String(value||''))}
         function extractPhoneDigits(value){const raw=String(value||'').trim();let digits=raw.replace(/[^\d]/g,'');if(raw.startsWith('+92')){if(digits.startsWith('92'))digits=digits.slice(2)}else if(digits.startsWith('0092'))digits=digits.slice(4);else if(digits.startsWith('92')&&digits.length>10)digits=digits.slice(2);else if(digits.startsWith('0')&&digits.length>10)digits=digits.slice(1);return digits}
         function normalizePhoneDigits(value){if(hasInvalidPhoneChars(value))return '';const raw=String(value||'').trim();let digits=raw.replace(/[^\d]/g,'');if(raw.startsWith('+92')){if(digits.startsWith('92'))digits=digits.slice(2)}else if(/^0092\d{10}$/.test(digits))digits=digits.slice(4);else if(/^92\d{10}$/.test(digits))digits=digits.slice(2);else if(/^0\d{10}$/.test(digits))digits=digits.slice(1);return /^\d{10}$/.test(digits)?digits:''}
@@ -7778,7 +7783,7 @@ ADMIN_HTML_PARTS.append(
         function attachEnrollmentEditSubjectEvents(){const allBox=editEnrollmentSubjectOptions.querySelector('[data-all-subjects]');const subjectBoxes=Array.from(editEnrollmentSubjectOptions.querySelectorAll('[data-enrollment-subject]:not([data-all-subjects])'));if(!allBox)return;allBox.addEventListener('change',()=>{subjectBoxes.forEach((box)=>{box.checked=allBox.checked});enrollmentEditState.selectedSubjects=collectEnrollmentEditSubjects()});subjectBoxes.forEach((box)=>box.addEventListener('change',()=>{allBox.checked=subjectBoxes.every((item)=>item.checked);enrollmentEditState.selectedSubjects=collectEnrollmentEditSubjects()}));enrollmentEditState.selectedSubjects=collectEnrollmentEditSubjects()}
         function renderEnrollmentEditSubjects(){const classValue=editEnrollmentClass.value;if(!classValue){editEnrollmentGroupField.classList.add('hidden');editEnrollmentGroupOptions.innerHTML='';editEnrollmentSubjectOptions.innerHTML='<div class="empty">Select a class to view available subjects.</div>';return}if(classValue==='IX'||classValue==='X'){editEnrollmentGroupField.classList.add('hidden');editEnrollmentGroupOptions.innerHTML='';editEnrollmentSubjectOptions.innerHTML=buildEnrollmentEditChoices(enrollmentSubjectCatalog[classValue]);attachEnrollmentEditSubjectEvents();return}if(classValue==='MDCAT Prep'||classValue==='ECAT Prep'){editEnrollmentGroupField.classList.add('hidden');editEnrollmentGroupOptions.innerHTML='';enrollmentEditState.group=classValue==='MDCAT Prep'?'Pre-Medical':'Pre-Engineering';editEnrollmentSubjectOptions.innerHTML=buildEnrollmentEditChoices(enrollmentSubjectCatalog[classValue]);attachEnrollmentEditSubjectEvents();return}editEnrollmentGroupField.classList.remove('hidden');editEnrollmentGroupOptions.innerHTML=`<div class="option-grid"><label class="choice"><input type="radio" name="editEnrollmentGroupChoice" value="Pre-Medical" ${enrollmentEditState.group==='Pre-Medical'?'checked':''}><span>Pre-Medical</span></label><label class="choice"><input type="radio" name="editEnrollmentGroupChoice" value="Pre-Engineering" ${enrollmentEditState.group==='Pre-Engineering'?'checked':''}><span>Pre-Engineering</span></label></div>`;const activeGroup=currentEnrollmentEditGroupValue();if(!activeGroup){editEnrollmentSubjectOptions.innerHTML='<div class="empty">Select a group to load the subject list.</div>'}else{enrollmentEditState.group=activeGroup;editEnrollmentSubjectOptions.innerHTML=buildEnrollmentEditChoices(enrollmentSubjectCatalog[classValue][activeGroup]||[]);attachEnrollmentEditSubjectEvents()}editEnrollmentGroupOptions.querySelectorAll('input[name="editEnrollmentGroupChoice"]').forEach((radio)=>radio.addEventListener('change',()=>{enrollmentEditState.group=radio.value;enrollmentEditState.selectedSubjects=[];editEnrollmentSubjectOptions.innerHTML=buildEnrollmentEditChoices(enrollmentSubjectCatalog[classValue][radio.value]||[]);attachEnrollmentEditSubjectEvents()}))}
         function resetEnrollmentEditForm(){enrollmentEditForm.reset();editEnrollmentId.value='';enrollmentEditTitle.textContent='Edit Enrollment';enrollmentEditState.selectedSubjects=[];enrollmentEditState.group='';enrollmentEditState.originalPhotoUrl='';enrollmentEditState.studentId='';resetEnrollmentEditPreview();editEnrollmentGroupField.classList.add('hidden');editEnrollmentGroupOptions.innerHTML='';editEnrollmentSubjectOptions.innerHTML='<div class="empty">Select a class to view available subjects.</div>';enrollmentEditModal.classList.add('hidden');syncAdminModalState()}
-        function openEnrollmentEditModal(item){if(!item)return;resetEnrollmentEditForm();editEnrollmentId.value=item.id;enrollmentEditState.studentId=String(item.id);enrollmentEditTitle.textContent=`Edit Enrollment - ${item.name}`;editFullName.value=item.name||'';editFatherName.value=item.father_name||'';editMobile.value=item.mobile||'';editCnic.value=item.cnic||'';editFatherContact.value=item.father_contact||'';editGender.value=item.gender||'';editEmail.value=item.email||'';editDateOfBirth.value=item.date_of_birth||'';editEnrollmentClass.value=item.class||'';editEnrollmentAddress.value=item.address||'';editEnrollmentPhoto.value='';enrollmentEditState.group=item.group||'';enrollmentEditState.selectedSubjects=[...(item.subjects||[])];enrollmentEditState.originalPhotoUrl=item.photo_url||'';if(enrollmentEditState.originalPhotoUrl)showEnrollmentEditPreview(enrollmentEditState.originalPhotoUrl);renderEnrollmentEditSubjects();enrollmentEditModal.classList.remove('hidden');syncAdminModalState()}
+        function openEnrollmentEditModal(item){if(!item)return;resetEnrollmentEditForm();editEnrollmentId.value=item.id;enrollmentEditState.studentId=String(item.id);enrollmentEditTitle.textContent=`Edit Enrollment - ${item.name}`;editFullName.value=item.name||'';editFatherName.value=item.father_name||'';editMobile.value=item.mobile||'';editCnic.value=item.cnic||'';editFatherContact.value=item.father_contact||'';editGender.value=item.gender||'';editEmail.value=item.email||'';editDateOfBirth.value=formatEnrollmentDateValue(item.date_of_birth||'');editEnrollmentClass.value=item.class||'';editEnrollmentAddress.value=item.address||'';editEnrollmentPhoto.value='';enrollmentEditState.group=item.group||'';enrollmentEditState.selectedSubjects=[...(item.subjects||[])];enrollmentEditState.originalPhotoUrl=item.photo_url||'';if(enrollmentEditState.originalPhotoUrl)showEnrollmentEditPreview(enrollmentEditState.originalPhotoUrl);renderEnrollmentEditSubjects();enrollmentEditModal.classList.remove('hidden');syncAdminModalState()}
 
         function formatAnalyticsSectionLabel(value){
             const labels={home:'Home',enrollment:'Enrollment',results:'Results',faculty:'Faculty',announcements:'Announcements',about:'About Us','status-check':'Status Check'};
@@ -8632,12 +8637,13 @@ ADMIN_HTML_PARTS.append(
 
         attachEnrollmentPhoneFormatting(editMobile);
         attachEnrollmentPhoneFormatting(editFatherContact);
+        attachEnrollmentDateFormatting(editDateOfBirth);
         editCnic.addEventListener('input',formatEnrollmentEditCnic);
         editMobile.addEventListener('change',formatEnrollmentEditMobile);
         editFatherContact.addEventListener('change',formatEnrollmentEditFatherContact);
         editEnrollmentClass.addEventListener('change',()=>{enrollmentEditState.selectedSubjects=[];enrollmentEditState.group='';renderEnrollmentEditSubjects()});
         editEnrollmentPhoto.addEventListener('change',()=>{const file=editEnrollmentPhoto.files[0];if(!file){if(enrollmentEditState.originalPhotoUrl)showEnrollmentEditPreview(enrollmentEditState.originalPhotoUrl);else resetEnrollmentEditPreview();return}if(!['image/jpeg','image/png'].includes(file.type)){editEnrollmentPhoto.value='';toastMessage('Student photo must be a JPG or PNG image.','error');if(enrollmentEditState.originalPhotoUrl)showEnrollmentEditPreview(enrollmentEditState.originalPhotoUrl);else resetEnrollmentEditPreview();return}if(file.size>300*1024){editEnrollmentPhoto.value='';toastMessage('Passport picture must be 300 KB or smaller.','error');if(enrollmentEditState.originalPhotoUrl)showEnrollmentEditPreview(enrollmentEditState.originalPhotoUrl);else resetEnrollmentEditPreview();return}showEnrollmentEditPreview(URL.createObjectURL(file),true)});
-        enrollmentEditForm.addEventListener('submit',async(event)=>{event.preventDefault();const studentId=editEnrollmentId.value;if(!studentId)return;formatEnrollmentEditMobile();formatEnrollmentEditFatherContact();if(!validateEnrollmentPhoneValue(editMobile.value)){toastMessage('Please enter a valid mobile number in +92 1234567890 format.','error');return}if(!validateEnrollmentPhoneValue(editFatherContact.value)){toastMessage('Please enter a valid father contact number in +92 1234567890 format.','error');return}const selectedClass=editEnrollmentClass.value.trim();let selectedGroup=currentEnrollmentEditGroupValue();if(selectedClass==='MDCAT Prep')selectedGroup='Pre-Medical';if(selectedClass==='ECAT Prep')selectedGroup='Pre-Engineering';if((selectedClass==='XI'||selectedClass==='XII')&&!selectedGroup){toastMessage('Please choose either Pre-Medical or Pre-Engineering.','error');return}const selectedSubjects=collectEnrollmentEditSubjects();if(!selectedSubjects.length){toastMessage('Please choose at least one subject.','error');return}const file=editEnrollmentPhoto.files[0];if(file&&file.size>300*1024){toastMessage('Passport picture must be 300 KB or smaller.','error');return}const formData=new FormData(enrollmentEditForm);formData.set('subjects',JSON.stringify(selectedSubjects));formData.set('group',selectedGroup);try{await api(`__ADMIN_PATH__/enrollment/${studentId}`,{method:'PUT',body:formData});toastMessage('Enrollment updated successfully.');resetEnrollmentEditForm();await loadData();notifyCrossPageSync('admin')}catch(error){toastMessage(error.message,'error')}});
+        enrollmentEditForm.addEventListener('submit',async(event)=>{event.preventDefault();const studentId=editEnrollmentId.value;if(!studentId)return;formatEnrollmentEditMobile();formatEnrollmentEditFatherContact();formatEnrollmentDateInput(editDateOfBirth);if(!validateEnrollmentPhoneValue(editMobile.value)){toastMessage('Please enter a valid mobile number in +92 1234567890 format.','error');return}if(!validateEnrollmentPhoneValue(editFatherContact.value)){toastMessage('Please enter a valid father contact number in +92 1234567890 format.','error');return}if(!validateEnrollmentDateValue(editDateOfBirth.value)){toastMessage('Please enter date of birth in DD/MM/YYYY format.','error');return}const selectedClass=editEnrollmentClass.value.trim();let selectedGroup=currentEnrollmentEditGroupValue();if(selectedClass==='MDCAT Prep')selectedGroup='Pre-Medical';if(selectedClass==='ECAT Prep')selectedGroup='Pre-Engineering';if((selectedClass==='XI'||selectedClass==='XII')&&!selectedGroup){toastMessage('Please choose either Pre-Medical or Pre-Engineering.','error');return}const selectedSubjects=collectEnrollmentEditSubjects();if(!selectedSubjects.length){toastMessage('Please choose at least one subject.','error');return}const file=editEnrollmentPhoto.files[0];if(file&&file.size>300*1024){toastMessage('Passport picture must be 300 KB or smaller.','error');return}const formData=new FormData(enrollmentEditForm);formData.set('subjects',JSON.stringify(selectedSubjects));formData.set('group',selectedGroup);formData.set('date_of_birth',editDateOfBirth.value.trim());try{await api(`__ADMIN_PATH__/enrollment/${studentId}`,{method:'PUT',body:formData});toastMessage('Enrollment updated successfully.');resetEnrollmentEditForm();await loadData();notifyCrossPageSync('admin')}catch(error){toastMessage(error.message,'error')}});
         document.getElementById('enrollmentEditCancel').addEventListener('click',resetEnrollmentEditForm);
         enrollmentEditModal.addEventListener('click',(event)=>{if(event.target===enrollmentEditModal)resetEnrollmentEditForm()});
 
