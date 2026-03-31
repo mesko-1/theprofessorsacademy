@@ -1,0 +1,25 @@
+{
+  "name": "The Professors Academy",
+  "short_name": "TPA",
+  "description": "Premium academic admissions, results, announcements, and student services portal for The Professors Academy.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a1929",
+  "theme_color": "#0a1929",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

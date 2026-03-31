@@ -1,0 +1,630 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 11969 >>
+stream
+BT
+/F1 18 Tf
+72 720 Td
+(The Professors Academy Website
+Complete Project Overview
+
+1. Project Identity
+
+Project Name:
+The Professors Academy Website
+
+Project Type:
+Custom academic institution website with an integrated admin panel, online admission management, public announcements, results publishing, faculty management, visitor messaging, analytics, SEO support, dark mode, live website sync, and downloadable admission forms.
+
+Primary Goal:
+To provide a professional and easy-to-manage academy website where:
+- students can submit enrollment forms online,
+- website visitors can send direct messages through the public website,
+- the academy can manage admissions from an admin panel,
+- announcements and results can be published,
+- faculty profiles can be managed,
+- students can track their admission status,
+- the institution can maintain a premium online presence with minimal deployment complexity.
+
+
+2. Main Modules
+
+Public Website:
+- Home section
+- Enrollment section
+- Status Check section
+- Message Us section
+- Faculty section
+- Results section
+- Announcements section
+- Gallery section
+- FAQ section
+- About Us section
+- Floating contact buttons
+- Splash screen
+- SEO, indexing, and PWA support
+
+Admin Panel:
+- Secure login
+- Dashboard and website insights
+- Pending admissions management
+- Final admission records
+- Website messages inbox
+- Announcements management
+- Results management
+- Faculty management
+- Website settings and content editing
+- Gallery and FAQ management
+- Activity log
+- Backup and restore tools
+- Motion/effects control
+- Dark mode control
+- Public status-check control
+
+
+3. Technology Stack
+
+Frontend:
+- HTML5
+- CSS3
+- Vanilla JavaScript
+
+Backend:
+- Python
+- Flask
+- Werkzeug
+
+Server / Runtime:
+- Gunicorn for deployment
+- Flask app for routing, APIs, admin rendering, validation, and business logic
+
+Database:
+- SQLite
+
+Deployment / Hosting Compatibility:
+- Localhost / local Flask server
+- Railway
+- Shared hosting with Python support
+- Apache-compatible hosting \(optional .htaccess included\)
+
+
+4. Languages Used
+
+Programming Languages:
+- Python
+- JavaScript
+
+Markup / Styling:
+- HTML
+- CSS
+
+Data / Config Formats:
+- JSON
+- SQLite SQL schema
+- XML \(sitemaps\)
+- TXT \(robots.txt style output and project docs\)
+
+
+5. Core Public Features
+
+Homepage:
+- Premium academic hero section
+- Editable hero text from admin panel
+- Academy splash screen on website load
+- Quick statistics
+- Latest announcements preview
+- Smooth formal motion effects
+- Gallery section
+- FAQ section
+- Homepage blocks on/off control
+- Live content refresh without manual page refresh
+
+Enrollment Form:
+- Full Name
+- Father Name
+- Mobile No
+- Father Contact No
+- CNIC No with formatting
+- Gender
+- Email Address
+- Date of Birth
+- Date of Birth in DD/MM/YYYY format
+- Passport Size Picture upload
+- Class selection
+- Group selection where applicable
+- Subject selection based on class/group
+- Address
+- Client-side and server-side validation
+- Cropping support for photo upload
+- Success popup after submission
+
+Status Check:
+- Student can check status using CNIC No and Date of Birth
+- Date of Birth support in DD/MM/YYYY format
+- Status popup
+- Admission-form PDF download when eligible
+- Admin can disable status checking and publish a custom disabled message
+
+Faculty:
+- Filtered public faculty display
+- Separate filtering for:
+  - Class IX-X
+  - XI-XII Pre-Med
+  - XI-XII Pre-Eng
+  - MDCAT
+  - ECAT
+- Teacher photo, subject, qualification, and experience
+- One teacher can be assigned to multiple class sections from admin
+- Public faculty cards show only the relevant section inside each active filter
+
+Results:
+- Public result cards
+- Downloadable PDF result files
+- Optional "New" badge per result
+
+Announcements:
+- Public notices
+- Optional "New" badge per announcement
+
+Message Us:
+- Public message form with full name, email, mobile number, and message body
+- Message length control
+- Messages delivered to the admin panel inbox
+- Admin can mark messages handled or delete them
+
+About Section:
+- Contact numbers
+- Email
+- Office timing
+- Address
+- Google map
+- Academy location highlight
+
+Floating Buttons:
+- WhatsApp floating button
+- Facebook floating button
+
+
+6. Core Admin Features
+
+Admin Access:
+- Custom secure admin URL
+- Username/password login
+- Session-based authentication
+
+Dashboard:
+- Quick action shortcuts
+- Statistics
+- Website insights
+- Live visitors information
+- Activity log summary
+- Instant refresh of new admissions and website messages
+
+Pending Admissions:
+- Search and filters
+- Bulk actions
+- Approve
+- Reject
+- Delete
+- Export selected list
+
+Admission Records:
+- Confirmed and rejected records
+- Class-wise sections
+- Time-range filters
+- Totals by class and status
+- CSV exports
+
+Announcements Management:
+- Add announcement
+- Edit announcement
+- Delete announcement
+- Draft / Live mode
+- New badge control
+- Marquee control
+
+Results Management:
+- Add result
+- Edit result
+- Delete result
+- Draft / Live mode
+- New badge control
+- File upload support
+
+Faculty Management:
+- Add faculty
+- Edit faculty
+- Delete faculty
+- Photo upload with crop support
+- Old faculty photo remove / replace option while editing
+- Faculty section and group assignment
+- Multiple section assignment for one teacher
+- Experience field
+- Ordering support
+
+Website Settings:
+- Contact details
+- Address
+- Office timing
+- Facebook page URL
+- WhatsApp button controls
+- Public status-check controls
+- Homepage hero content
+- Enrollment section content
+- Gallery section content
+- FAQ section content
+- Homepage section on/off controls
+- Popup notice content
+- Status popup messages
+- Downloaded form note
+- Class admission visibility scope
+- Animation / effects toggle
+- Public dark mode toggle
+- Public message form toggle
+- Facebook and WhatsApp controls
+
+Backup & Restore:
+- Backup download
+- Restore from backup
+
+Activity Log:
+- Tracks important admin-side actions
+
+
+7. Database Design
+
+Database Engine:
+- SQLite
+
+Main Database File:
+- database.db
+
+Primary Tables:
+- students
+- announcements
+- results
+- faculty
+- admin
+- settings
+- analytics / tracking related tables
+- activity log related tables
+
+Students Table Stores:
+- student identity details
+- contacts
+- CNIC
+- DOB
+- class / group / subjects
+- photo path
+- roll number
+- admission status
+- confirmation / rejection times
+
+Announcements Table Stores:
+- title
+- description
+- date
+- live/draft status
+- new badge state
+
+Results Table Stores:
+- title
+- class
+- year
+- uploaded PDF filename
+- live/draft status
+- new badge state
+
+Faculty Table Stores:
+- teacher name
+- subject
+- qualification
+- photo
+- class/section assignment
+- track/group
+- experience
+- display order
+
+Settings Table Stores:
+- public website editable content
+- contact values
+- WhatsApp / Facebook values
+- popup settings
+- marquee settings
+- motion settings
+- class-visibility settings
+
+
+8. Roll Number Logic
+
+Roll numbers are generated in structured academic format:
+- current year / class / roll no
+- current year / class / group / roll no
+- current year / MDCAT or ECAT / roll no
+
+Examples:
+- 2k26/IX/001
+- 2k26/X/001
+- 2k26/XI/P.M/001
+- 2k26/XI/P.E/001
+- 2k26/MDCAT/001
+- 2k26/ECAT/001
+
+
+9. APIs and Routes
+
+Public APIs:
+- /api/announcements
+- /api/results
+- /api/faculty
+- /api/enroll
+- /api/enrollment-status
+- /api/enrollment-form-download
+- /api/settings
+- /api/site-summary
+- /api/analytics/visit
+- /api/analytics/presence
+
+Utility / SEO / Health Routes:
+- /
+- /health
+- /robots.txt
+- /sitemap.xml
+- /sitemap-pages.xml
+- /sitemap-results.xml
+- /site.webmanifest
+- /service-worker.js
+
+Admin Access Route:
+- /adminpanel0109tpa2026
+
+Admin Functional Areas:
+- login
+- session restore / logout
+- admissions management
+- records export
+- results CRUD
+- announcements CRUD
+- faculty CRUD
+- settings save/load
+- analytics / insights
+- backup / restore
+- activity log
+
+
+10. Security Features
+
+- Session-based admin authentication
+- Custom admin panel path
+- Admin remember-cookie support
+- Default-credential protection logic
+- Input validation on both client and server
+- CNIC normalization and validation
+- Phone validation
+- File size validation
+- File type validation
+- Secure upload handling
+- SQL parameterized queries
+- CSRF-style protections for admin actions
+- Same-origin checks
+- Honeypot anti-bot field in enrollment form
+- Rate limiting for sensitive endpoints
+- Security headers
+- Safer health endpoint behavior
+
+
+11. File Upload Handling
+
+Student Uploads:
+- Passport size picture
+- Validation for type and size
+- Client-side crop support
+
+Faculty Uploads:
+- Photo upload
+- Admin crop support
+
+Results Uploads:
+- PDF uploads
+
+Upload Folders:
+- uploads/student_photos/
+- uploads/faculty_photos/
+- uploads/gallery_images/
+- uploads/results/
+
+
+12. Downloaded Admission Form
+
+The project includes a formal downloadable admission form:
+- available for admin use
+- available to students when allowed
+- PDF output
+- professional academic layout
+- student details
+- student photograph
+- important note
+- signature boxes
+- single-page optimization
+
+Form File Naming Pattern:
+- student_name_roll_no_date.pdf
+
+
+13. SEO and Indexing Support
+
+Implemented SEO Features:
+- meta description
+- canonical URL
+- robots directives
+- Googlebot directives
+- Google Search Console verification meta tag support
+- Open Graph tags
+- Twitter meta tags
+- structured data \(JSON-LD\)
+- robots.txt
+- sitemap index
+- page sitemap
+- result sitemap
+- Railway/free-subdomain compatible indexing setup
+
+Purpose:
+- Better indexing
+- Better search visibility
+- Cleaner social sharing preview
+
+
+14. Analytics and Insights
+
+Website analytics support includes:
+- section/page visit tracking
+- live presence tracking
+- unique visitor insights
+- most-viewed sections
+- last 7 days summary
+- admin dashboard insights
+- live visitor count
+
+
+15. PWA / Installable Website Support
+
+Included:
+- favicon
+- app icons
+- manifest
+- service worker
+
+Purpose:
+- Better branding
+- installable web-app style support
+- improved icon handling on desktop/mobile shortcuts
+
+
+16. Motion / UI Experience
+
+Public website includes:
+- formal entrance animations
+- soft section reveals
+- premium hover polish
+- hero motion
+- stats number animation
+- splash screen
+- admin-controlled animation toggle
+- admin-controlled dark mode toggle
+
+Admin panel includes:
+- matching dark mode support
+- formal administrative wording
+- live dashboard refresh for new admissions and messages
+
+Design goal:
+- smooth
+- formal
+- professional
+- not flashy
+
+
+17. File Structure Summary
+
+Key Source Files:
+- index.html
+- app.py
+- requirements.txt
+- runtime.txt
+- Procfile
+- .gitignore
+- .htaccess
+- favicon.svg
+- favicon.ico
+- site.webmanifest
+- service-worker.js
+- run_localhost.bat
+- project_overview.txt
+- project_overview.pdf
+- static/
+- uploads/
+
+
+18. Deployment Notes
+
+Recommended for Hosting:
+- set SECRET_KEY
+- set admin username/password
+- use persistent storage for SQLite and uploads
+- redeploy after pushing latest source
+
+Recommended Environment Values:
+- SECRET_KEY
+- TPA_ADMIN_USERNAME
+- TPA_ADMIN_PASSWORD
+- TPA_SECURE_COOKIES=1
+- TPA_DATA_DIR=/data \(for persistent hosted storage\)
+
+
+19. Project Strengths
+
+- Minimal file structure
+- Strong admin control
+- Editable content without code changes
+- Academic branding
+- Public + admin workflow in one project
+- Real student admission handling
+- Downloadable formal forms
+- Good deployment portability
+- SEO and analytics support
+
+
+20. Final Technical Summary
+
+This project is a full academy management website built with:
+- HTML
+- CSS
+- JavaScript
+- Python
+- Flask
+- SQLite
+- Gunicorn
+
+It combines:
+- a public academic website,
+- a secure admin panel,
+- online enrollment processing,
+- result and announcement publishing,
+- faculty directory management,
+- website content editing,
+- analytics,
+- SEO,
+- file uploads,
+- and PDF-based admission-document support.
+
+In short:
+This is not just a simple website. It is a complete custom academic web application for admissions, communication, and academy operations.
+) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000012263 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+12333
+%%EOF
