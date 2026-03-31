@@ -205,7 +205,7 @@ DEFAULT_SETTINGS = {
     "faq_item_1_question": "How do I apply for admission online?",
     "faq_item_1_answer": "Fill in the enrollment form, upload the required passport size picture, and submit the form online. The academy team will review it and contact you with the next step.",
     "faq_item_2_question": "How can I check my enrollment status?",
-    "faq_item_2_answer": "Use the status check section with your CNIC number and date of birth in DD/MM/YYYY format to view whether your application is pending, confirmed, or rejected.",
+    "faq_item_2_answer": "Use the status check section with your CNIC number and full name to view whether your application is pending, confirmed, or rejected.",
     "faq_item_3_question": "When should I visit the academy office?",
     "faq_item_3_answer": "Once your admission is confirmed, download the form and visit the admin office with the printed copy and the required fee during office timing.",
     "faq_item_4_question": "Can I view results and notices online?",
@@ -221,7 +221,7 @@ DEFAULT_SETTINGS = {
     "status_message_pending": "Your enrollment is currently under review. We will contact you after verification.",
     "status_message_confirmed": "Your enrollment has been confirmed. Please stay connected with the academy for the next admission steps.",
     "status_message_rejected": "Your enrollment could not be approved at this time. Please contact the admin or visit the academy office for guidance.",
-    "status_message_not_found": "No enrollment record matched the provided CNIC number and date of birth. Please check the details and try again.",
+    "status_message_not_found": "No enrollment record matched the provided CNIC number. Please check the details and try again.",
     "admission_form_note": "Please submit a printed copy of this form with Rs. 5000 at the admin office to complete the admission process.",
     "homepage_popup_enabled": "1",
     "homepage_popup_title": "Admissions & Results Update",
@@ -4261,15 +4261,10 @@ def normalize_lookup_name(value: str) -> str:
     return re.sub(r"\s+", " ", str(value or "").strip()).lower()
 
 
-def normalize_status_lookup_date_of_birth(value: str) -> Optional[str]:
-    return normalize_date_of_birth(value or "")
-
-
-def find_student_for_status_lookup(cnic: str, date_of_birth: str) -> Optional[Dict[str, Any]]:
+def find_student_for_status_lookup(cnic: str, full_name: str = "") -> Optional[Dict[str, Any]]:
     normalized_cnic = normalize_cnic(cnic or "")
-    raw_date_of_birth = str(date_of_birth or "").strip()
-    normalized_date_of_birth = normalize_status_lookup_date_of_birth(raw_date_of_birth) if raw_date_of_birth else None
-    if not normalized_cnic or not normalized_date_of_birth:
+    normalized_name = normalize_lookup_name(full_name or "")
+    if not normalized_cnic:
         return None
 
     with get_connection() as connection:
@@ -4284,10 +4279,11 @@ def find_student_for_status_lookup(cnic: str, date_of_birth: str) -> Optional[Di
         ).fetchall()
     if not rows:
         return None
-    for row in rows:
-        if normalize_date_of_birth(row["date_of_birth"] or "") == normalized_date_of_birth:
-            return serialize_student(row)
-    return None
+    if normalized_name:
+        for row in rows:
+            if normalize_lookup_name(row["name"] or "") == normalized_name:
+                return serialize_student(row)
+    return serialize_student(rows[0])
 
 
 def filename_date_fragment(value: Any) -> str:
@@ -5038,14 +5034,12 @@ def api_enrollment_status():
             403,
         )
 
-    date_of_birth = str(payload.get("date_of_birth") or payload.get("dateOfBirth") or "").strip()
+    full_name = str(payload.get("full_name") or payload.get("fullName") or "").strip()
 
     if not cnic:
         return json_error("Please enter a valid CNIC number.")
-    if not normalize_status_lookup_date_of_birth(date_of_birth):
-        return json_error("Please enter date of birth in DD/MM/YYYY format.")
 
-    student = find_student_for_status_lookup(cnic, date_of_birth)
+    student = find_student_for_status_lookup(cnic, full_name)
     if not student:
         return (
             jsonify(
@@ -5112,12 +5106,10 @@ def api_enrollment_form_download():
         return security_error
     payload = parse_request_payload()
     cnic = normalize_cnic(payload.get("cnic") or "")
-    date_of_birth = str(payload.get("date_of_birth") or payload.get("dateOfBirth") or "").strip()
+    full_name = str(payload.get("full_name") or payload.get("fullName") or "").strip()
 
     if not cnic:
         return json_error("Please enter a valid CNIC number.")
-    if not normalize_status_lookup_date_of_birth(date_of_birth):
-        return json_error("Please enter date of birth in DD/MM/YYYY format.")
 
     settings = get_settings()
     if str(settings.get("status_check_enabled", "1")) != "1":
@@ -5127,9 +5119,9 @@ def api_enrollment_form_download():
         )
         return json_error(disabled_message, 403)
 
-    student = find_student_for_status_lookup(cnic, date_of_birth)
+    student = find_student_for_status_lookup(cnic, full_name)
     if not student:
-        return json_error("No enrollment record matched the provided CNIC number and date of birth.", 404)
+        return json_error("No enrollment record matched the provided CNIC number.", 404)
     if student["status"] != "confirmed":
         return json_error("Admission form download is available only after admission confirmation.", 400)
     return make_admission_pdf_response(student)
